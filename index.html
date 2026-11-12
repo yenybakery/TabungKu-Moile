@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TabungKu - Portal Nasabah</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 antialiased min-h-screen flex flex-col justify-center items-center">
+
+    <div id="app-container" class="w-full max-w-md bg-slate-50 min-h-screen md:min-h-[850px] md:max-h-[90vh] md:rounded-3xl shadow-2xl flex flex-col relative overflow-hidden">
+        
+        <div id="global-loader" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white hidden">
+            <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p id="loader-text" class="text-sm font-medium">Memproses...</p>
+        </div>
+
+        <!-- MODAL QR SCANNER -->
+        <div id="modal-scanner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm z-40 flex flex-col items-center justify-center p-6 text-white hidden">
+            <div class="w-full flex justify-between items-center mb-4">
+                <h3 class="text-sm font-bold text-emerald-400"><i class="fa-solid fa-qrcode mr-1"></i> Scan QR Tujuan Transfer</h3>
+                <button onclick="closeNasabahScanner()" class="bg-rose-600 text-white px-3 py-1 rounded-lg text-xs font-bold cursor-pointer">Tutup</button>
+            </div>
+            <div id="qr-reader" class="w-full rounded-2xl overflow-hidden bg-black border-2 border-emerald-500"></div>
+            <p class="text-xs text-slate-400 mt-4 text-center">Arahkan kamera ke QR Code rekening tujuan.</p>
+        </div>
+
+        <!-- VIEW LOGIN -->
+        <div id="view-login" class="flex-1 flex flex-col justify-between p-6 bg-slate-900 text-white">
+            <div class="pt-8 text-center">
+                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i class="fa-solid fa-piggy-bank text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold">TabungKu Mobile</h1>
+                <p class="text-xs text-slate-400 mt-1">Portal Resmi Nasabah Komunitas</p>
+            </div>
+
+            <div class="space-y-6 my-auto">
+                <form id="form-login" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">ID Nasabah</label>
+                        <input type="text" id="login-id" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white uppercase" placeholder="NSB-xxxx">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">PIN (6 Digit)</label>
+                        <input type="password" id="login-pass" required maxlength="6" inputmode="numeric" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white" placeholder="••••••">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl cursor-pointer hover:bg-indigo-500 transition">Masuk Rekening</button>
+                </form>
+                <button type="button" onclick="switchView('view-register')" class="w-full bg-slate-800 text-indigo-300 font-semibold py-3 rounded-xl text-xs cursor-pointer hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-user-plus mr-1.5"></i> Buka Akun Nasabah Baru
+                </button>
+            </div>
+            <div class="text-center pb-4"><p class="text-[11px] text-slate-500">Google Sheets Database</p></div>
+        </div>
+
+        <!-- VIEW REGISTER -->
+        <div id="view-register" class="flex-1 flex flex-col justify-between p-6 bg-slate-900 text-white hidden overflow-y-auto">
+            <div class="pt-4 text-center">
+                <h2 class="text-xl font-bold">Pendaftaran Nasabah</h2>
+                <p class="text-xs text-slate-400 mt-1">Lengkapi data diri untuk membuat rekening baru</p>
+            </div>
+            <form id="form-register" class="space-y-3.5 my-auto py-4">
+                <input type="text" id="reg-nama" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white" placeholder="Nama Lengkap">
+                
+                <div class="flex space-x-2">
+                    <select id="reg-country-code" class="w-36 bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2.5 text-xs text-white shrink-0">
+                        <!-- Terisi otomatis via JS -->
+                    </select>
+                    <input type="tel" id="reg-phone" required inputmode="numeric" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white" placeholder="08123456789">
+                </div>
+
+                <input type="text" id="reg-question" required value="Siapa nama ibu kandung mu?" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white">
+                <input type="text" id="reg-answer" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white" placeholder="Jawaban Keamanan">
+                <input type="password" id="reg-pin" required maxlength="6" inputmode="numeric" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white" placeholder="PIN 6 Digit">
+                <button type="submit" class="w-full bg-emerald-600 font-bold py-3.5 rounded-xl text-white cursor-pointer hover:bg-emerald-500 transition">Daftar Akun</button>
+            </form>
+            <button type="button" onclick="switchView('view-login')" class="text-xs text-slate-400 text-center pb-2 cursor-pointer">Kembali ke Login</button>
+        </div>
+
+        <!-- VIEW DASHBOARD NASABAH -->
+        <div id="view-nasabah-dashboard" class="flex-1 flex flex-col bg-slate-100 overflow-hidden hidden">
+            <div class="flex-1 overflow-y-auto pb-24">
+                <div class="bg-indigo-900 text-white p-6 pb-10 rounded-b-[35px] shadow-lg relative">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <p class="text-[11px] text-indigo-300">Selamat Datang,</p>
+                            <h2 class="text-lg font-bold" id="nasabah-name-display">Nasabah</h2>
+                        </div>
+                        <button onclick="logout()" class="w-10 h-10 bg-indigo-800 rounded-xl text-rose-300 cursor-pointer"><i class="fa-solid fa-power-off"></i></button>
+                    </div>
+                    <div class="bg-indigo-800 border border-indigo-600 p-5 rounded-2xl space-y-2">
+                        <span class="text-xs text-indigo-200">Saldo Tabungan Utama</span>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-2xl font-extrabold text-white" id="nasabah-saldo-display">Rp 0</h3>
+                            <span id="nasabah-status-badge" class="text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-md font-semibold">Belum Aktif</span>
+                        </div>
+                        <div id="nasabah-status-desc" class="text-[10px] text-amber-200 italic">Harap lakukan setoran awal minimal Rp 50.000 ke kantor untuk mengaktifkan akun.</div>
+                        <div class="pt-2 border-t border-indigo-700 flex justify-between text-[11px] text-indigo-300">
+                            <span>ID: <strong id="nasabah-id-display" class="text-white">NSB-XXXX</strong></span>
+                            <button onclick="loadNasabahDashboardData(true)" class="cursor-pointer"><i class="fa-solid fa-rotate mr-1"></i> Perbarui</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-5 space-y-5 -mt-4">
+                    <div class="grid grid-cols-3 gap-2 bg-white p-3 rounded-2xl shadow-sm border border-slate-200 text-center">
+                        <button onclick="openModalMyQR()" class="p-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-xs cursor-pointer"><i class="fa-solid fa-qrcode mr-1"></i> QR Saya</button>
+                        <button onclick="openModalScanQR()" class="p-2 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs cursor-pointer"><i class="fa-solid fa-expand mr-1"></i> Scan QR</button>
+                        <button onclick="openModalTransfer()" class="p-2 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs cursor-pointer"><i class="fa-solid fa-paper-plane mr-1"></i> Transfer</button>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Mutasi Terakhir</h4>
+                        <div id="nasabah-mutasi-list" class="space-y-2.5"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const URL_GAS = "https://script.google.com/macros/s/AKfycbyGkHphr6cLNHbMpAeFG866xrKuDQj6bGwaFacOdwvA4CWuscud4qJWnpcvLJnRcH-1TQ/exec";
+
+        const COUNTRY_CODES = [
+            { name: "Indonesia", code: "62" }, { name: "Malaysia", code: "60" }, { name: "Singapore", code: "65" },
+            { name: "Brunei", code: "673" }, { name: "Thailand", code: "66" }, { name: "Philippines", code: "63" },
+            { name: "Vietnam", code: "84" }, { name: "Timor-Leste", code: "670" }, { name: "Saudi Arabia", code: "966" },
+            { name: "United Arab Emirates", code: "971" }, { name: "Qatar", code: "974" }, { name: "Kuwait", code: "965" },
+            { name: "Japan", code: "81" }, { name: "South Korea", code: "82" }, { name: "Taiwan", code: "886" },
+            { name: "China", code: "86" }, { name: "Australia", code: "61" }, { name: "United States / Canada", code: "1" },
+            { name: "United Kingdom", code: "44" }, { name: "India", code: "91" }
+        ];
+
+        let sessionUser = JSON.parse(sessionStorage.getItem('session_nasabah')) || null;
+        let rawBalanceValue = 0;
+        let html5QrScanner = null;
+        let cacheMutasi = [];
+        let lastSpokenMutasiId = localStorage.getItem('last_spoken_mutasi_id') || "";
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const countrySelect = document.getElementById('reg-country-code');
+            COUNTRY_CODES.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.code;
+                opt.textContent = `+${c.code} (${c.name})`;
+                if (c.code === "62") opt.selected = true;
+                countrySelect.appendChild(opt);
+            });
+
+            if (sessionUser) {
+                switchView('view-nasabah-dashboard');
+                loadNasabahDashboardData(false);
+            }
+        });
+
+        function terbilang(angka) {
+            angka = Number(angka);
+            if (angka === 0) return "nol";
+            var angka_huruf = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas"];
+            var hasil = "";
+            if (angka < 12) hasil = angka_huruf[angka];
+            else if (angka < 20) hasil = terbilang(angka - 10) + " belas";
+            else if (angka < 100) hasil = terbilang(Math.floor(angka / 10)) + " puluh " + terbilang(angka % 10);
+            else if (angka < 200) hasil = "seratus " + terbilang(angka - 100);
+            else if (angka < 1000) hasil = terbilang(Math.floor(angka / 100)) + " ratus " + terbilang(angka % 100);
+            else if (angka < 2000) hasil = "seribu " + terbilang(angka - 1000);
+            else if (angka < 1000000) hasil = terbilang(Math.floor(angka / 1000)) + " ribu " + terbilang(angka % 1000);
+            else if (angka < 1000000000) hasil = terbilang(Math.floor(angka / 1000000)) + " juta " + terbilang(angka % 1000000);
+            else if (angka < 1000000000000) hasil = terbilang(Math.floor(angka / 1000000000)) + " miliar " + terbilang(angka % 1000000000);
+            return hasil.replace(/  +/g, ' ').trim();
+        }
+
+        function playSpeechNotification(nominal, jenisTransaksi) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                let teksPesan = "";
+                let nominalKata = terbilang(nominal);
+
+                if (jenisTransaksi === 'SETOR') {
+                    teksPesan = `Setoran tunai sebesar ${nominalKata} rupiah telah masuk ke rekening Anda.`;
+                } else if (jenisTransaksi === 'TRANSFER MASUK') {
+                    teksPesan = `Ada uang masuk sebesar ${nominalKata} rupiah ke rekening Anda.`;
+                } else if (jenisTransaksi === 'TARIK') {
+                    teksPesan = `Penarikan tunai sebesar ${nominalKata} rupiah berhasil diproses.`;
+                } else if (jenisTransaksi === 'TRANSFER KELUAR') {
+                    teksPesan = `Transfer keluar sebesar ${nominalKata} rupiah berhasil dikirim.`;
+                } else {
+                    teksPesan = `Mutasi baru sebesar ${nominalKata} rupiah.`;
+                }
+
+                let utterance = new SpeechSynthesisUtterance(teksPesan);
+                utterance.lang = 'id-ID';
+                utterance.volume = 1.0;
+                utterance.rate = 0.95;
+                let voices = window.speechSynthesis.getVoices();
+                let indonesianVoice = voices.find(v => v.lang === 'id-ID' || v.lang.includes('id'));
+                if (indonesianVoice) utterance.voice = indonesianVoice;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function showLoader(t = "Memproses...") {
+            document.getElementById('loader-text').innerText = t;
+            document.getElementById('global-loader').classList.remove('hidden');
+        }
+        function hideLoader() { document.getElementById('global-loader').classList.add('hidden'); }
+
+        function switchView(id) {
+            ['view-login', 'view-register', 'view-nasabah-dashboard'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        document.getElementById('form-login').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let id = document.getElementById('login-id').value.trim().toUpperCase();
+            let pin = document.getElementById('login-pass').value.trim();
+            showLoader("Menghubungkan...");
+            try {
+                let res = await fetch(`${URL_GAS}?action=loginNasabah&id=${id}&pin=${pin}`);
+                let data = await res.json();
+                hideLoader();
+                if (data.success) {
+                    sessionUser = data.user;
+                    sessionStorage.setItem('session_nasabah', JSON.stringify(sessionUser));
+                    switchView('view-nasabah-dashboard');
+                    loadNasabahDashboardData(true);
+                } else Swal.fire('Gagal', data.message, 'error');
+            } catch (err) { hideLoader(); Swal.fire('Error', 'Gagal terhubung server.', 'error'); }
+        });
+
+        document.getElementById('form-register').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const countryCode = document.getElementById('reg-country-code').value;
+            let rawPhone = document.getElementById('reg-phone').value.replace(/\D/g, '');
+            if (rawPhone.startsWith('0')) {
+                rawPhone = countryCode + rawPhone.slice(1);
+            } else if (!rawPhone.startsWith(countryCode)) {
+                rawPhone = countryCode + rawPhone;
+            }
+
+            let payload = {
+                action: "registerNasabah",
+                nama: document.getElementById('reg-nama').value.trim(),
+                phone: rawPhone,
+                question: document.getElementById('reg-question').value.trim(),
+                answer: document.getElementById('reg-answer').value.trim(),
+                pin: document.getElementById('reg-pin').value.trim()
+            };
+            showLoader("Mendaftarkan...");
+            try {
+                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify(payload) });
+                let data = await res.json();
+                hideLoader();
+                if (data.success) {
+                    Swal.fire('Berhasil!', `ID Anda: ${data.newId}`, 'success').then(() => {
+                        document.getElementById('login-id').value = data.newId;
+                        switchView('view-login');
+                    });
+                } else Swal.fire('Gagal', data.message, 'error');
+            } catch (err) { hideLoader(); Swal.fire('Error', 'Gagal mengirim data.', 'error'); }
+        });
+
+        async function loadNasabahDashboardData(showLoading = false) {
+            if (!sessionUser) return;
+            if (showLoading) showLoader("Memuat...");
+            try {
+                let res = await fetch(`${URL_GAS}?action=getNasabahData&id=${sessionUser.id}`);
+                let data = await res.json();
+                if (showLoading) hideLoader();
+                if (data.success) {
+                    sessionUser = data.user;
+                    sessionStorage.setItem('session_nasabah', JSON.stringify(sessionUser));
+                    cacheMutasi = data.mutasi || [];
+                    rawBalanceValue = Number(sessionUser.saldo || 0);
+
+                    document.getElementById('nasabah-name-display').innerText = sessionUser.nama;
+                    document.getElementById('nasabah-id-display').innerText = sessionUser.id;
+                    document.getElementById('nasabah-saldo-display').innerText = formatRupiah(rawBalanceValue);
+
+                    let badge = document.getElementById('nasabah-status-badge');
+                    let desc = document.getElementById('nasabah-status-desc');
+                    if (rawBalanceValue > 0) {
+                        badge.className = "text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-md font-semibold";
+                        badge.innerText = "Aktif";
+                        desc.classList.add('hidden');
+                    } else {
+                        badge.className = "text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-md font-semibold";
+                        badge.innerText = "Belum Aktif";
+                        desc.classList.remove('hidden');
+                    }
+
+                    if (cacheMutasi.length > 0) {
+                        let latest = cacheMutasi[0];
+                        let key = (latest.waktu || "") + "_" + (latest.amount || "") + "_" + (latest.type || "");
+                        if (key !== lastSpokenMutasiId) {
+                            lastSpokenMutasiId = key;
+                            localStorage.setItem('last_spoken_mutasi_id', key);
+                            playSpeechNotification(Number(latest.amount), latest.type);
+                        }
+                    }
+
+                    let mHtml = '';
+                    cacheMutasi.forEach(t => {
+                        let isSetor = t.type === 'SETOR' || t.type === 'TRANSFER MASUK';
+                        mHtml += `<div class="bg-white p-3 rounded-xl border flex justify-between items-center text-xs"><div><b>${t.type}</b><br><span class="text-[10px] text-slate-400">${t.waktu}</span></div><span class="font-bold ${isSetor ? 'text-emerald-600' : 'text-rose-600'}">${isSetor ? '+' : '-'}${formatRupiah(t.amount)}</span></div>`;
+                    });
+                    document.getElementById('nasabah-mutasi-list').innerHTML = mHtml || '<p class="text-xs text-slate-400">Belum ada mutasi.</p>';
+                }
+            } catch (err) { if (showLoading) hideLoader(); }
+        }
+
+        setInterval(() => { if (sessionUser) loadNasabahDashboardData(false); }, 5000);
+
+        function openModalMyQR() {
+            Swal.fire({ title: 'QR Saya', html: `<div id="qrcode-box" class="p-3 bg-white inline-block border rounded-xl"></div><p class="text-xs font-bold mt-2">${sessionUser.id}</p>`, didOpen: () => { new QRCode(document.getElementById('qrcode-box'), { text: sessionUser.id, width: 150, height: 150 }); } });
+        }
+
+        function openModalScanQR() {
+            if (rawBalanceValue <= 0) {
+                Swal.fire('Belum Aktif', 'Saldo Rp 0. Lakukan setoran awal terlebih dahulu.', 'warning');
+                return;
+            }
+            document.getElementById('modal-scanner').classList.remove('hidden');
+            html5QrScanner = new Html5Qrcode("qr-reader");
+            html5QrScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 220, height: 220 } },
+                (decodedText) => {
+                    closeNasabahScanner();
+                    let match = decodedText.trim().match(/NSB-\d+/i);
+                    let targetId = match ? match[0].toUpperCase() : decodedText.trim().toUpperCase();
+                    openModalTransfer(targetId);
+                },
+                (errorMessage) => {}
+            ).catch((err) => {
+                closeNasabahScanner();
+                Swal.fire('Kamera Gagal', 'Pastikan izin kamera diaktifkan di browser Anda.', 'error');
+            });
+        }
+
+        function closeNasabahScanner() {
+            document.getElementById('modal-scanner').classList.add('hidden');
+            if (html5QrScanner) {
+                html5QrScanner.stop().then(() => { html5QrScanner.clear(); html5QrScanner = null; }).catch(() => { html5QrScanner = null; });
+            }
+        }
+
+        async function openModalTransfer(presetTarget = '') {
+            if (rawBalanceValue <= 0) { Swal.fire('Belum Aktif', 'Saldo Rp 0.', 'warning'); return; }
+            const { value: formValues } = await Swal.fire({
+                title: 'Transfer Saldo',
+                html: `
+                    <div class="space-y-3 text-left">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">ID Nasabah Tujuan</label>
+                            <input id="swal-target" class="swal2-input !mx-0 !w-full text-xs uppercase" value="${presetTarget || 'NSB-'}" placeholder="NSB-xxxx">
+                        </div>
+                        <div id="swal-target-info" class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 text-xs text-indigo-900 hidden">
+                            <p><strong>Penerima:</strong> <span id="swal-info-nama" class="font-bold">-</span></p>
+                            <p><strong>No. HP/WA:</strong> <span id="swal-info-phone" class="font-bold">-</span></p>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nominal (Rp)</label>
+                            <input id="swal-amount" type="number" class="swal2-input !mx-0 !w-full text-xs" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Catatan</label>
+                            <input id="swal-desc" class="swal2-input !mx-0 !w-full text-xs" placeholder="Catatan transaksi...">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">PIN 6 Digit Anda</label>
+                            <input id="swal-pin" type="password" maxlength="6" inputmode="numeric" class="swal2-input !mx-0 !w-full text-xs" placeholder="••••••">
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false, showCancelButton: true, confirmButtonText: 'Kirim Sekarang', cancelButtonText: 'Batal',
+                didOpen: () => {
+                    const targetInput = document.getElementById('swal-target');
+                    const checkTargetAccount = async (id) => {
+                        const infoBox = document.getElementById('swal-target-info');
+                        const nameEl = document.getElementById('swal-info-nama');
+                        const phoneEl = document.getElementById('swal-info-phone');
+                        if (id.length < 5 || id === sessionUser.id) { infoBox.classList.add('hidden'); return; }
+                        try {
+                            let res = await fetch(`${URL_GAS}?action=getNasabahData&id=${id}`);
+                            let data = await res.json();
+                            if (data.success && data.user) {
+                                nameEl.innerText = data.user.nama;
+                                phoneEl.innerText = data.user.phone || '-';
+                                infoBox.classList.remove('hidden');
+                            } else { infoBox.classList.add('hidden'); }
+                        } catch (err) { infoBox.classList.add('hidden'); }
+                    };
+                    if (presetTarget) checkTargetAccount(presetTarget);
+                    targetInput.addEventListener('input', (e) => { checkTargetAccount(e.target.value.trim().toUpperCase()); });
+                },
+                preConfirm: () => ({
+                    target: document.getElementById('swal-target').value.trim().toUpperCase(),
+                    amount: Number(document.getElementById('swal-amount').value),
+                    desc: document.getElementById('swal-desc').value.trim(),
+                    pin: document.getElementById('swal-pin').value
+                })
+            });
+
+            if (formValues) {
+                if (!formValues.target || formValues.amount <= 0 || !formValues.pin) {
+                    Swal.fire('Perhatian', 'Mohon lengkapi ID tujuan, nominal, dan PIN.', 'warning');
+                    return;
+                }
+
+                showLoader("Mengirim...");
+                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: "transferSaldo", senderId: sessionUser.id, ...formValues }) });
+                let data = await res.json();
+                hideLoader();
+                if (data.success) {
+                    loadNasabahDashboardData(true);
+                    generateAndDownloadPDF({
+                        title: "STRUK TRANSFER BERHASIL",
+                        ref: "TRX-" + Math.floor(100000 + Math.random() * 900000),
+                        waktu: new Date().toLocaleString('id-ID'),
+                        pengirim: sessionUser.nama + " (" + sessionUser.id + ")",
+                        penerima: formValues.target,
+                        nominal: formatRupiah(formValues.amount),
+                        catatan: formValues.desc || "-",
+                        phoneTarget: data.phone || ""
+                    });
+                } else Swal.fire('Gagal', data.message, 'error');
+            }
+        }
+
+        function generateAndDownloadPDF(data) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: [80, 120] });
+
+            doc.setFillColor(49, 46, 129);
+            doc.rect(0, 0, 80, 25, 'F');
+            doc.setTextColor(165, 180, 252);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("TABUNGKU", 40, 12, { align: "center" });
+
+            doc.setTextColor(148, 163, 184);
+            doc.setFontSize(8);
+            doc.text("Bukti Transfer Resmi Komunitas", 40, 18, { align: "center" });
+
+            doc.setTextColor(30, 41, 59);
+            doc.setFontSize(9);
+            let y = 35;
+
+            const printRow = (label, val, isGreen = false) => {
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(100, 116, 139);
+                doc.text(label, 10, y);
+                doc.setFont("helvetica", "bold");
+                if(isGreen) doc.setTextColor(16, 185, 129);
+                else doc.setTextColor(30, 41, 59);
+                doc.text(String(val || "-"), 70, y, { align: "right" });
+                y += 8;
+            };
+
+            printRow("No. Referensi", data.ref);
+            printRow("Waktu", data.waktu);
+            if(data.pengirim) printRow("Pengirim", data.pengirim);
+            if(data.penerima) printRow("Penerima", data.penerima);
+            printRow("Nominal", data.nominal, true);
+            printRow("Catatan", data.catatan);
+
+            y += 2;
+            doc.setDrawColor(203, 213, 225);
+            doc.setLineDash([2, 2], 0);
+            doc.line(10, y, 70, y);
+
+            y += 10;
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(16, 185, 129);
+            doc.setFontSize(9);
+            doc.text("STATUS: BERHASIL & VALID", 40, y, { align: "center" });
+
+            y += 6;
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(148, 163, 184);
+            doc.setFontSize(7);
+            doc.text("Dokumen digital ini sah diterbitkan oleh Sistem TabungKu", 40, y, { align: "center" });
+
+            doc.save(`Struk-TabungKu-${data.ref}.pdf`);
+
+            let cleanPhone = String(data.phoneTarget || "").replace(/\D/g, '');
+            let waText = encodeURIComponent(`Halo, berikut dokumen PDF bukti transfer resmi TabungKu:\n\nNo Ref: ${data.ref}\nNominal: ${data.nominal}\nStatus: BERHASIL`);
+            let waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${waText}` : `https://wa.me/?text=${waText}`;
+
+            Swal.fire({
+                title: 'Transfer Sukses & PDF Tersimpan!',
+                html: `
+                    <div class="bg-slate-100 p-3 rounded-xl border text-left text-xs space-y-1 mb-3">
+                        <p><strong>Ref:</strong> ${data.ref}</p>
+                        <p><strong>Nominal:</strong> <span class="text-emerald-600 font-bold">${data.nominal}</span></p>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-3">File PDF telah diunduh ke perangkat. Apakah Anda ingin mengirimkannya ke WhatsApp penerima?</p>
+                `,
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-brands fa-whatsapp mr-1"></i> Ya, Kirim ke WA',
+                cancelButtonText: 'Tidak, Selesai Saja',
+                confirmButtonColor: '#16a34a',
+                cancelButtonColor: '#64748b'
+            }).then((result) => {
+                if (result.isConfirmed) { window.open(waUrl, '_blank'); }
+            });
+        }
+
+        function logout() { sessionUser = null; sessionStorage.removeItem('session_nasabah'); switchView('view-login'); }
+        function formatRupiah(n) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0); }
+    </script>
+</body>
+</html>
