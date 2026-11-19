@@ -3,521 +3,834 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TabungKu - Portal Nasabah</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <title>Tabungan Warga - Digital Banking</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --border: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg); color: var(--text); height: 100vh; display: flex; justify-content: center; align-items: center; padding: 10px; }
+
+        .app-container {
+            width: 100%; max-width: 440px; height: 95vh; max-height: 760px;
+            background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+            display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; background: var(--bg); border-bottom: 1px solid var(--border);
+        }
+        .header h1 { font-size: 1.1rem; font-weight: 700; }
+        .btn-sm { background: var(--border); color: var(--text); border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+        .btn-logout { background: #7f1d1d; }
+
+        .body { flex: 1; padding: 20px; overflow-y: auto; }
+        .section { display: none; flex-direction: column; gap: 14px; }
+        .section.active { display: flex; }
+
+        /* Form & Inputs */
+        .tabs { display: flex; background: var(--bg); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--muted); font-weight: 600; border-radius: 8px; cursor: pointer; }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+
+        .field { display: flex; flex-direction: column; gap: 6px; position: relative; }
+        .field label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+        .field input {
+            width: 100%; padding: 12px 14px; background: var(--bg); border: 1px solid var(--border);
+            color: var(--text); border-radius: 10px; font-size: 1rem; outline: none;
+        }
+        .field input:focus { border-color: var(--primary); }
+
+        .input-row { display: flex; gap: 8px; }
+        .btn-icon { background: var(--primary); border: none; color: #fff; padding: 0 16px; border-radius: 10px; font-size: 1.2rem; cursor: pointer; }
+
+        .suggestions {
+            position: absolute; top: 100%; left: 0; right: 0; background: var(--bg);
+            border: 1px solid var(--border); border-radius: 8px; max-height: 150px; overflow-y: auto; z-index: 50; display: none;
+        }
+        .suggestion-item { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; display: flex; justify-content: space-between; font-size: 0.9rem; }
+        .suggestion-item:hover { background: rgba(37, 99, 235, 0.2); }
+
+        .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; }
+        .quick-btn { background: var(--border); border: none; color: #fff; padding: 8px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+
+        .btn-primary {
+            width: 100%; padding: 14px; background: var(--primary); color: #fff; border: none;
+            border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 6px;
+        }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); }
+
+        /* Dashboard & Cards */
+        .balance-card {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb); padding: 20px; border-radius: 16px;
+            cursor: pointer; user-select: none; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+        }
+        .balance-card small { font-size: 0.8rem; opacity: 0.85; display: block; }
+        .balance-card h2 { font-size: 1.85rem; margin: 6px 0; letter-spacing: 0.5px; }
+
+        .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .menu-btn {
+            background: var(--bg); border: 1px solid var(--border); color: var(--text);
+            padding: 16px 12px; border-radius: 12px; font-size: 0.9rem; font-weight: 600;
+            display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer;
+        }
+        .menu-btn:hover { border-color: var(--primary); }
+        .menu-btn span { font-size: 1.5rem; }
+
+        /* Lists */
+        .list-box { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; max-height: 280px; overflow-y: auto; }
+        .list-item { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+        .list-item:last-child { border-bottom: none; }
+
+        /* QR & Scanner */
+        #qr-reader { width: 240px; height: 240px; margin: 0 auto; border-radius: 14px; overflow: hidden; border: 2px solid var(--primary); background: #000; }
+        .qr-box { background: var(--bg); padding: 20px; border-radius: 14px; text-align: center; border: 1px solid var(--border); }
+        #qrcode { background: #fff; padding: 12px; border-radius: 10px; display: inline-block; margin: 12px 0; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none;
+            justify-content: center; align-items: center; padding: 16px; z-index: 100;
+        }
+        .modal-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 360px; padding: 20px; text-align: center; }
+        .modal-box h3 { margin-bottom: 8px; }
+        .modal-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 16px; line-height: 1.4; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 14px; }
+
+        .receipt { background: #fff; color: #0f172a; padding: 16px; border-radius: 10px; text-align: left; font-family: monospace; font-size: 0.85rem; }
+        .receipt-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        #statusBar { text-align: center; font-size: 0.8rem; color: var(--muted); padding: 6px; min-height: 24px; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-800 antialiased min-h-screen flex flex-col justify-center items-center">
+<body>
 
-    <div id="app-container" class="w-full max-w-md bg-slate-50 min-h-screen md:min-h-[850px] md:max-h-[90vh] md:rounded-3xl shadow-2xl flex flex-col relative overflow-hidden">
-        
-        <div id="global-loader" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-white hidden">
-            <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-            <p id="loader-text" class="text-sm font-medium">Memproses...</p>
+<div class="app-container">
+    <div class="header">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <button class="btn-sm" id="backBtn" style="display:none;" onclick="navigate('home')">⬅ Kembali</button>
+            <h1 id="pageTitle">Tabungan Warga</h1>
+        </div>
+        <button class="btn-sm btn-logout" id="logoutBtn" style="display:none;" onclick="logout()">Keluar</button>
+    </div>
+
+    <div class="body">
+        <!-- 1. AUTH (LOGIN / REGISTER) -->
+        <div id="authSection" class="section active">
+            <div class="tabs">
+                <button class="tab-btn active" id="tabLogin" onclick="setAuthMode('login')">Masuk</button>
+                <button class="tab-btn" id="tabRegister" onclick="setAuthMode('register')">Buka Rekening</button>
+            </div>
+
+            <div class="field" id="nameField" style="display:none;">
+                <label>Nama Lengkap Sesuai Identitas</label>
+                <input type="text" id="regName" placeholder="Masukkan nama lengkap">
+            </div>
+
+            <div class="field">
+                <label>Nomor HP (Nomor Rekening)</label>
+                <input type="tel" id="authHp" placeholder="Contoh: 08123456789">
+            </div>
+
+            <div class="field">
+                <label id="pinLabel">PIN Keamanan (6 Digit)</label>
+                <input type="password" inputmode="numeric" maxlength="6" id="authPin" placeholder="••••••">
+            </div>
+
+            <button class="btn-primary" id="authSubmitBtn" onclick="submitAuth()">Masuk</button>
         </div>
 
-        <!-- MODAL QR SCANNER -->
-        <div id="modal-scanner" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm z-40 flex flex-col items-center justify-center p-6 text-white hidden">
-            <div class="w-full flex justify-between items-center mb-4">
-                <h3 class="text-sm font-bold text-emerald-400"><i class="fa-solid fa-qrcode mr-1"></i> Scan QR Tujuan Transfer</h3>
-                <button onclick="closeNasabahScanner()" class="bg-rose-600 text-white px-3 py-1 rounded-lg text-xs font-bold cursor-pointer">Tutup</button>
+        <!-- 2. DASHBOARD -->
+        <div id="homeSection" class="section">
+            <div class="balance-card" onclick="toggleBalance()">
+                <small id="accInfo">Rekening: -</small>
+                <h2 id="balanceText">Rp ••••••••</h2>
+                <small id="balanceHint">Ketuk untuk menampilkan saldo</small>
             </div>
-            <div id="qr-reader" class="w-full rounded-2xl overflow-hidden bg-black border-2 border-emerald-500"></div>
-            <p class="text-xs text-slate-400 mt-4 text-center">Arahkan kamera ke QR Code rekening tujuan.</p>
+
+            <div class="menu-grid">
+                <button class="menu-btn" onclick="navigate('transfer')"><span>💸</span>Transfer</button>
+                <button class="menu-btn" onclick="openScanner('transfer')"><span>📷</span>Scan QR</button>
+                <button class="menu-btn" onclick="navigate('myqr')"><span>🆔</span>QR Rekening</button>
+                <button class="menu-btn" onclick="navigate('mutasi')"><span>📜</span>Mutasi Rekening</button>
+                <button class="menu-btn" id="btnWargaTarik" onclick="infoTarikTunai()"><span>💵</span>Tarik Tunai</button>
+
+                <!-- Menu Khusus Teller / Admin -->
+                <button class="menu-btn admin-only" style="display:none; border-color:var(--success);" onclick="navigate('setorAdmin')"><span>📥</span>Setor Tunai</button>
+                <button class="menu-btn admin-only" style="display:none; border-color:var(--warning);" onclick="navigate('tarikAdmin')"><span>📤</span>Tarik Tunai</button>
+                <button class="menu-btn admin-only" style="display:none;" onclick="navigate('rekapAdmin')"><span>📑</span>Laporan PDF</button>
+                <button class="menu-btn admin-only" style="display:none;" onclick="navigate('kelolaAdmin')"><span>👥</span>Data Nasabah</button>
+            </div>
         </div>
 
-        <!-- VIEW LOGIN -->
-        <div id="view-login" class="flex-1 flex flex-col justify-between p-6 bg-slate-900 text-white">
-            <div class="pt-8 text-center">
-                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                    <i class="fa-solid fa-piggy-bank text-3xl"></i>
+        <!-- 3. TRANSFER -->
+        <div id="transferSection" class="section">
+            <div class="field">
+                <label>Rekening Tujuan (No HP / Nama)</label>
+                <div class="input-row">
+                    <input type="text" id="tfTarget" placeholder="Cari nama atau nomor HP..." oninput="searchMember(this.value, 'tfSuggest', 'tfTarget', (hp) => selectedTfHp = hp)">
+                    <button class="btn-icon" onclick="openScanner('transfer')">📷</button>
                 </div>
-                <h1 class="text-2xl font-bold">TabungKu Mobile</h1>
-                <p class="text-xs text-slate-400 mt-1">Portal Resmi Nasabah Komunitas</p>
+                <div class="suggestions" id="tfSuggest"></div>
             </div>
-
-            <div class="space-y-6 my-auto">
-                <form id="form-login" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">ID Nasabah</label>
-                        <input type="text" id="login-id" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white uppercase" placeholder="NSB-xxxx">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">PIN (6 Digit)</label>
-                        <input type="password" id="login-pass" required maxlength="6" inputmode="numeric" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white" placeholder="••••••">
-                    </div>
-                    <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-xl cursor-pointer hover:bg-indigo-500 transition">Masuk Rekening</button>
-                </form>
-                <button type="button" onclick="switchView('view-register')" class="w-full bg-slate-800 text-indigo-300 font-semibold py-3 rounded-xl text-xs cursor-pointer hover:bg-slate-700 transition">
-                    <i class="fa-solid fa-user-plus mr-1.5"></i> Buka Akun Nasabah Baru
-                </button>
+            <div class="field">
+                <label>Nominal Transfer (Rp)</label>
+                <input type="number" id="tfAmount" placeholder="Minimal Rp 1.000">
+                <div class="quick-grid">
+                    <button class="quick-btn" onclick="addNominal('tfAmount', 20000)">+20rb</button>
+                    <button class="quick-btn" onclick="addNominal('tfAmount', 50000)">+50rb</button>
+                    <button class="quick-btn" onclick="addNominal('tfAmount', 100000)">+100rb</button>
+                    <button class="quick-btn" onclick="addNominal('tfAmount', 500000)">+500rb</button>
+                </div>
             </div>
-            <div class="text-center pb-4"><p class="text-[11px] text-slate-500">Google Sheets Database</p></div>
+            <button class="btn-primary btn-success" onclick="promptTransferPin()">Lanjutkan Transfer</button>
         </div>
 
-        <!-- VIEW REGISTER -->
-        <div id="view-register" class="flex-1 flex flex-col justify-between p-6 bg-slate-900 text-white hidden overflow-y-auto">
-            <div class="pt-4 text-center">
-                <h2 class="text-xl font-bold">Pendaftaran Nasabah</h2>
-                <p class="text-xs text-slate-400 mt-1">Lengkapi data diri untuk membuat rekening baru</p>
-            </div>
-            <form id="form-register" class="space-y-3.5 my-auto py-4">
-                <input type="text" id="reg-nama" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white" placeholder="Nama Lengkap">
-                
-                <div class="flex space-x-2">
-                    <select id="reg-country-code" class="w-36 bg-slate-800 border border-slate-700 rounded-xl px-2.5 py-2.5 text-xs text-white shrink-0">
-                        <!-- Terisi otomatis via JS -->
-                    </select>
-                    <input type="tel" id="reg-phone" required inputmode="numeric" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white" placeholder="08123456789">
+        <!-- 4. SETOR TUNAI (ADMIN) -->
+        <div id="setorAdminSection" class="section">
+            <div class="field">
+                <label>Nasabah Tujuan (No HP / Nama)</label>
+                <div class="input-row">
+                    <input type="text" id="setorTarget" placeholder="Cari nasabah..." oninput="searchMember(this.value, 'setorSuggest', 'setorTarget', (hp) => selectedSetorHp = hp)">
+                    <button class="btn-icon" onclick="openScanner('setor')">📷</button>
                 </div>
-
-                <input type="text" id="reg-question" required value="Siapa nama ibu kandung mu?" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white">
-                <input type="text" id="reg-answer" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white" placeholder="Jawaban Keamanan">
-                <input type="password" id="reg-pin" required maxlength="6" inputmode="numeric" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white" placeholder="PIN 6 Digit">
-                <button type="submit" class="w-full bg-emerald-600 font-bold py-3.5 rounded-xl text-white cursor-pointer hover:bg-emerald-500 transition">Daftar Akun</button>
-            </form>
-            <button type="button" onclick="switchView('view-login')" class="text-xs text-slate-400 text-center pb-2 cursor-pointer">Kembali ke Login</button>
+                <div class="suggestions" id="setorSuggest"></div>
+            </div>
+            <div class="field">
+                <label>Nominal Setoran (Rp)</label>
+                <input type="number" id="setorAmount" placeholder="Masukkan nominal">
+                <div class="quick-grid">
+                    <button class="quick-btn" onclick="addNominal('setorAmount', 50000)">+50rb</button>
+                    <button class="quick-btn" onclick="addNominal('setorAmount', 100000)">+100rb</button>
+                    <button class="quick-btn" onclick="addNominal('setorAmount', 200000)">+200rb</button>
+                    <button class="quick-btn" onclick="addNominal('setorAmount', 500000)">+500rb</button>
+                </div>
+            </div>
+            <button class="btn-primary btn-success" onclick="executeSetor()">Proses Setor Tunai</button>
         </div>
 
-        <!-- VIEW DASHBOARD NASABAH -->
-        <div id="view-nasabah-dashboard" class="flex-1 flex flex-col bg-slate-100 overflow-hidden hidden">
-            <div class="flex-1 overflow-y-auto pb-24">
-                <div class="bg-indigo-900 text-white p-6 pb-10 rounded-b-[35px] shadow-lg relative">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <p class="text-[11px] text-indigo-300">Selamat Datang,</p>
-                            <h2 class="text-lg font-bold" id="nasabah-name-display">Nasabah</h2>
-                        </div>
-                        <button onclick="logout()" class="w-10 h-10 bg-indigo-800 rounded-xl text-rose-300 cursor-pointer"><i class="fa-solid fa-power-off"></i></button>
-                    </div>
-                    <div class="bg-indigo-800 border border-indigo-600 p-5 rounded-2xl space-y-2">
-                        <span class="text-xs text-indigo-200">Saldo Tabungan Utama</span>
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-2xl font-extrabold text-white" id="nasabah-saldo-display">Rp 0</h3>
-                            <span id="nasabah-status-badge" class="text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-md font-semibold">Belum Aktif</span>
-                        </div>
-                        <div id="nasabah-status-desc" class="text-[10px] text-amber-200 italic">Harap lakukan setoran awal minimal Rp 50.000 ke kantor untuk mengaktifkan akun.</div>
-                        <div class="pt-2 border-t border-indigo-700 flex justify-between text-[11px] text-indigo-300">
-                            <span>ID: <strong id="nasabah-id-display" class="text-white">NSB-XXXX</strong></span>
-                            <button onclick="loadNasabahDashboardData(true)" class="cursor-pointer"><i class="fa-solid fa-rotate mr-1"></i> Perbarui</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-5 space-y-5 -mt-4">
-                    <div class="grid grid-cols-3 gap-2 bg-white p-3 rounded-2xl shadow-sm border border-slate-200 text-center">
-                        <button onclick="openModalMyQR()" class="p-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-xs cursor-pointer"><i class="fa-solid fa-qrcode mr-1"></i> QR Saya</button>
-                        <button onclick="openModalScanQR()" class="p-2 bg-emerald-50 text-emerald-600 rounded-xl font-bold text-xs cursor-pointer"><i class="fa-solid fa-expand mr-1"></i> Scan QR</button>
-                        <button onclick="openModalTransfer()" class="p-2 bg-amber-50 text-amber-600 rounded-xl font-bold text-xs cursor-pointer"><i class="fa-solid fa-paper-plane mr-1"></i> Transfer</button>
-                    </div>
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-500 uppercase mb-2">Mutasi Terakhir</h4>
-                        <div id="nasabah-mutasi-list" class="space-y-2.5"></div>
-                    </div>
-                </div>
+        <!-- 5. TARIK TUNAI (ADMIN) -->
+        <div id="tarikAdminSection" class="section">
+            <div class="field">
+                <label>Nasabah Penarik (No HP / Nama)</label>
+                <input type="text" id="tarikTarget" placeholder="Cari nasabah..." oninput="searchMember(this.value, 'tarikSuggest', 'tarikTarget', (hp) => selectedTarikHp = hp)">
+                <div class="suggestions" id="tarikSuggest"></div>
             </div>
+            <div class="field">
+                <label>Nominal Penarikan (Rp)</label>
+                <input type="number" id="tarikAmount" placeholder="Masukkan nominal">
+            </div>
+            <button class="btn-primary btn-warning" onclick="requestTarik()">Kirim Otorisasi ke HP Nasabah</button>
+        </div>
+
+        <!-- 6. SCANNER QR TERPADU -->
+        <div id="scannerSection" class="section">
+            <p style="text-align:center; font-size:0.9rem; color:var(--muted);">Arahkan kamera ke QR Rekening Nasabah</p>
+            <div id="qr-reader"></div>
+        </div>
+
+        <!-- 7. QR REKENING SAYA -->
+        <div id="myqrSection" class="section">
+            <div class="qr-box">
+                <strong id="qrOwnerName">Nama Nasabah</strong>
+                <div style="color:var(--muted); font-size:0.85rem;" id="qrOwnerHp">No. Rek: -</div>
+                <div id="qrcode"></div>
+                <p style="font-size:0.8rem; color:var(--muted);">Tunjukkan QR ini untuk menerima transfer atau setor tunai.</p>
+            </div>
+        </div>
+
+        <!-- 8. MUTASI REKENING -->
+        <div id="mutasiSection" class="section">
+            <div class="list-box" id="mutasiList"></div>
+        </div>
+
+        <!-- 9. LAPORAN & PDF (ADMIN) -->
+        <div id="rekapAdminSection" class="section">
+            <div id="pdfArea" style="background:var(--bg); padding:12px; border-radius:12px;">
+                <h4 style="text-align:center; margin-bottom:10px;">Laporan Saldo Tabungan Warga</h4>
+                <div class="list-box" id="rekapList" style="border:none;"></div>
+            </div>
+            <button class="btn-primary" onclick="exportPDF()">Unduh Laporan PDF</button>
+        </div>
+
+        <!-- 10. KELOLA NASABAH (ADMIN) -->
+        <div id="kelolaAdminSection" class="section">
+            <div class="list-box" id="nasabahList"></div>
+            <button class="btn-primary" onclick="showAddMemberModal()">+ Tambah Nasabah Baru</button>
         </div>
     </div>
 
-    <script>
-        const URL_GAS = "https://script.google.com/macros/s/AKfycbyGkHphr6cLNHbMpAeFG866xrKuDQj6bGwaFacOdwvA4CWuscud4qJWnpcvLJnRcH-1TQ/exec";
+    <div id="statusBar"></div>
+</div>
 
-        const COUNTRY_CODES = [
-            { name: "Indonesia", code: "62" }, { name: "Malaysia", code: "60" }, { name: "Singapore", code: "65" },
-            { name: "Brunei", code: "673" }, { name: "Thailand", code: "66" }, { name: "Philippines", code: "63" },
-            { name: "Vietnam", code: "84" }, { name: "Timor-Leste", code: "670" }, { name: "Saudi Arabia", code: "966" },
-            { name: "United Arab Emirates", code: "971" }, { name: "Qatar", code: "974" }, { name: "Kuwait", code: "965" },
-            { name: "Japan", code: "81" }, { name: "South Korea", code: "82" }, { name: "Taiwan", code: "886" },
-            { name: "China", code: "86" }, { name: "Australia", code: "61" }, { name: "United States / Canada", code: "1" },
-            { name: "United Kingdom", code: "44" }, { name: "India", code: "91" }
-        ];
+<!-- MODAL UNIVERSAL -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+        <h3 id="modalTitle">Judul</h3>
+        <p id="modalDesc">Deskripsi</p>
+        <div id="modalCustom"></div>
+        <div class="modal-actions" id="modalActions"></div>
+    </div>
+</div>
 
-        let sessionUser = JSON.parse(sessionStorage.getItem('session_nasabah')) || null;
-        let rawBalanceValue = 0;
-        let html5QrScanner = null;
-        let cacheMutasi = [];
-        let lastSpokenMutasiId = localStorage.getItem('last_spoken_mutasi_id') || "";
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbz0IOrR9enMuQcAr45yNvz84PmOsqWD55zMD3MpjncxfgD21w-OTTTbuJsW7__A57gQEw/exec";
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const countrySelect = document.getElementById('reg-country-code');
-            COUNTRY_CODES.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.code;
-                opt.textContent = `+${c.code} (${c.name})`;
-                if (c.code === "62") opt.selected = true;
-                countrySelect.appendChild(opt);
-            });
+    let state = {
+        authMode: 'login',
+        user: null,
+        hideBalance: true,
+        members: [],
+        mutations: [],
+        scanContext: 'transfer',
+        scannerInstance: null
+    };
 
-            if (sessionUser) {
-                switchView('view-nasabah-dashboard');
-                loadNasabahDashboardData(false);
-            }
-        });
+    let selectedTfHp = "", selectedSetorHp = "", selectedTarikHp = "";
 
-        function terbilang(angka) {
-            angka = Number(angka);
-            if (angka === 0) return "nol";
-            var angka_huruf = ["", "satu", "dua", "tiga", "empat", "lima", "enam", "tujuh", "delapan", "sembilan", "sepuluh", "sebelas"];
-            var hasil = "";
-            if (angka < 12) hasil = angka_huruf[angka];
-            else if (angka < 20) hasil = terbilang(angka - 10) + " belas";
-            else if (angka < 100) hasil = terbilang(Math.floor(angka / 10)) + " puluh " + terbilang(angka % 10);
-            else if (angka < 200) hasil = "seratus " + terbilang(angka - 100);
-            else if (angka < 1000) hasil = terbilang(Math.floor(angka / 100)) + " ratus " + terbilang(angka % 100);
-            else if (angka < 2000) hasil = "seribu " + terbilang(angka - 1000);
-            else if (angka < 1000000) hasil = terbilang(Math.floor(angka / 1000)) + " ribu " + terbilang(angka % 1000);
-            else if (angka < 1000000000) hasil = terbilang(Math.floor(angka / 1000000)) + " juta " + terbilang(angka % 1000000);
-            else if (angka < 1000000000000) hasil = terbilang(Math.floor(angka / 1000000000)) + " miliar " + terbilang(angka % 1000000000);
-            return hasil.replace(/  +/g, ' ').trim();
-        }
+    const normalizeHp = (num) => String(num || "").trim().replace(/^'+/, "").replace(/^(\+62|62|0)/, "");
+    const normalizePin = (pin) => String(pin || "").trim().replace(/^'+/, "").replace(/^0+/, "");
 
-        function playSpeechNotification(nominal, jenisTransaksi) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                let teksPesan = "";
-                let nominalKata = terbilang(nominal);
+    // --- API SYNC ---
+    async function syncData() {
+        try {
+            const res = await fetch(`${API_URL}?action=getData`);
+            const data = await res.json();
+            state.members = data.anggota || [];
+            state.mutations = data.mutasi || [];
 
-                if (jenisTransaksi === 'SETOR') {
-                    teksPesan = `Setoran tunai sebesar ${nominalKata} rupiah telah masuk ke rekening Anda.`;
-                } else if (jenisTransaksi === 'TRANSFER MASUK') {
-                    teksPesan = `Ada uang masuk sebesar ${nominalKata} rupiah ke rekening Anda.`;
-                } else if (jenisTransaksi === 'TARIK') {
-                    teksPesan = `Penarikan tunai sebesar ${nominalKata} rupiah berhasil diproses.`;
-                } else if (jenisTransaksi === 'TRANSFER KELUAR') {
-                    teksPesan = `Transfer keluar sebesar ${nominalKata} rupiah berhasil dikirim.`;
-                } else {
-                    teksPesan = `Mutasi baru sebesar ${nominalKata} rupiah.`;
+            if (state.user) {
+                const updated = state.members.find(m => normalizeHp(m.hp) === normalizeHp(state.user.hp));
+                if (updated) {
+                    state.user.saldo = Number(updated.saldo) || 0;
+                    state.user.pass = String(updated.pass || "");
+                    renderBalance();
+                    if (!state.user.isAdmin && updated.pinTarik) {
+                        openTarikApprovalModal(updated.pinTarik);
+                    }
                 }
-
-                let utterance = new SpeechSynthesisUtterance(teksPesan);
-                utterance.lang = 'id-ID';
-                utterance.volume = 1.0;
-                utterance.rate = 0.95;
-                let voices = window.speechSynthesis.getVoices();
-                let indonesianVoice = voices.find(v => v.lang === 'id-ID' || v.lang.includes('id'));
-                if (indonesianVoice) utterance.voice = indonesianVoice;
-                window.speechSynthesis.speak(utterance);
             }
+        } catch (e) {
+            console.error("Sync error:", e);
         }
+    }
 
-        function showLoader(t = "Memproses...") {
-            document.getElementById('loader-text').innerText = t;
-            document.getElementById('global-loader').classList.remove('hidden');
+    async function sendPost(payload) {
+        setStatus("Memproses transaksi...");
+        try {
+            const res = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+            setStatus("");
+            return await res.json();
+        } catch (e) {
+            setStatus("Gagal terhubung ke server.");
+            return { status: "error" };
         }
-        function hideLoader() { document.getElementById('global-loader').classList.add('hidden'); }
+    }
 
-        function switchView(id) {
-            ['view-login', 'view-register', 'view-nasabah-dashboard'].forEach(v => document.getElementById(v).classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-        }
+    // --- AUTHENTICATION ---
+    function setAuthMode(mode) {
+        state.authMode = mode;
+        document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+        document.getElementById('tabRegister').classList.toggle('active', mode === 'register');
+        document.getElementById('nameField').style.display = mode === 'register' ? 'flex' : 'none';
+        document.getElementById('pinLabel').textContent = mode === 'register' ? 'Buat PIN Keamanan (6 Digit)' : 'Masukkan PIN (6 Digit)';
+        document.getElementById('authSubmitBtn').textContent = mode === 'register' ? 'Daftar Rekening' : 'Masuk';
+    }
 
-        document.getElementById('form-login').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            let id = document.getElementById('login-id').value.trim().toUpperCase();
-            let pin = document.getElementById('login-pass').value.trim();
-            showLoader("Menghubungkan...");
-            try {
-                let res = await fetch(`${URL_GAS}?action=loginNasabah&id=${id}&pin=${pin}`);
-                let data = await res.json();
-                hideLoader();
-                if (data.success) {
-                    sessionUser = data.user;
-                    sessionStorage.setItem('session_nasabah', JSON.stringify(sessionUser));
-                    switchView('view-nasabah-dashboard');
-                    loadNasabahDashboardData(true);
-                } else Swal.fire('Gagal', data.message, 'error');
-            } catch (err) { hideLoader(); Swal.fire('Error', 'Gagal terhubung server.', 'error'); }
-        });
+    async function submitAuth() {
+        const hp = document.getElementById('authHp').value.trim();
+        const pin = document.getElementById('authPin').value.trim();
 
-        document.getElementById('form-register').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const countryCode = document.getElementById('reg-country-code').value;
-            let rawPhone = document.getElementById('reg-phone').value.replace(/\D/g, '');
-            if (rawPhone.startsWith('0')) {
-                rawPhone = countryCode + rawPhone.slice(1);
-            } else if (!rawPhone.startsWith(countryCode)) {
-                rawPhone = countryCode + rawPhone;
+        if (!hp || pin.length < 4) return showModal("Validasi Gagal", "Masukkan Nomor HP dan PIN yang valid.");
+        if (state.members.length === 0) await syncData();
+
+        if (state.authMode === 'register') {
+            const name = document.getElementById('regName').value.trim();
+            if (!name) return showModal("Validasi Gagal", "Nama lengkap wajib diisi.");
+            if (state.members.some(m => normalizeHp(m.hp) === normalizeHp(hp))) {
+                return showModal("Gagal", "Nomor HP sudah terdaftar sebagai rekening.");
             }
 
-            let payload = {
-                action: "registerNasabah",
-                nama: document.getElementById('reg-nama').value.trim(),
-                phone: rawPhone,
-                question: document.getElementById('reg-question').value.trim(),
-                answer: document.getElementById('reg-answer').value.trim(),
-                pin: document.getElementById('reg-pin').value.trim()
+            await sendPost({ type: "register", name, hp, saldo: 0, pass: pin, pattern: "" });
+            await syncData();
+
+            showModal(
+                "Rekening Aktif",
+                "Pendaftaran berhasil. Silakan masuk menggunakan Nomor HP dan PIN Anda.",
+                "",
+                `<button class="btn-primary" onclick="closeModal(); document.getElementById('authPin').value=''; setAuthMode('login');">OK</button>`
+            );
+        } else {
+            const found = state.members.find(m => normalizeHp(m.hp) === normalizeHp(hp));
+            if (!found) return showModal("Gagal Masuk", "Nomor rekening tidak ditemukan.");
+
+            if (!found.pass || found.pass === "1234") {
+                return openForcePinModal(found);
+            }
+
+            const sheetPin = String(found.pass || "").trim();
+            if (sheetPin !== pin && normalizePin(sheetPin) !== normalizePin(pin)) {
+                return showModal("Gagal Masuk", "PIN yang Anda masukkan salah.");
+            }
+
+            state.user = {
+                name: found.name,
+                hp: String(found.hp),
+                saldo: Number(found.saldo) || 0,
+                pass: String(found.pass),
+                isAdmin: (found.role && found.role.toLowerCase() === 'admin')
             };
-            showLoader("Mendaftarkan...");
-            try {
-                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify(payload) });
-                let data = await res.json();
-                hideLoader();
-                if (data.success) {
-                    Swal.fire('Berhasil!', `ID Anda: ${data.newId}`, 'success').then(() => {
-                        document.getElementById('login-id').value = data.newId;
-                        switchView('view-login');
-                    });
-                } else Swal.fire('Gagal', data.message, 'error');
-            } catch (err) { hideLoader(); Swal.fire('Error', 'Gagal mengirim data.', 'error'); }
+
+            document.getElementById('authPin').value = "";
+            document.getElementById('logoutBtn').style.display = 'block';
+            document.getElementById('accInfo').textContent = `${state.user.name} • Rek: ${state.user.hp}`;
+            document.getElementById('btnWargaTarik').style.display = state.user.isAdmin ? 'none' : 'flex';
+            document.querySelectorAll('.admin-only').forEach(el => el.style.display = state.user.isAdmin ? 'flex' : 'none');
+
+            renderBalance();
+            navigate('home');
+            syncData();
+        }
+    }
+
+    function openForcePinModal(user) {
+        showModal(
+            "Aktivasi Keamanan Akun",
+            `Halo ${user.name}, akun Anda dibuat oleh Admin. Silakan buat PIN 6 digit pribadi Anda sebelum melanjutkan:`,
+            `<input type="password" inputmode="numeric" maxlength="6" id="newPinInput" placeholder="Masukkan 6 digit PIN baru" style="width:100%; padding:12px; background:var(--bg); border:1px solid var(--border); color:#fff; border-radius:8px; text-align:center; font-size:1.1rem;">`,
+            `<button class="btn-primary" onclick="saveInitialPin('${user.hp}')">Simpan PIN</button>`
+        );
+    }
+
+    async function saveInitialPin(hp) {
+        const newPin = document.getElementById('newPinInput').value.trim();
+        if (newPin.length < 4) return alert("PIN minimal 4-6 digit angka.");
+        await sendPost({ type: "updateCredentials", hp, pass: newPin, pattern: "" });
+        await syncData();
+        closeModal();
+        showModal("Berhasil", "PIN berhasil disimpan. Silakan login kembali.");
+    }
+
+    function logout() {
+        stopScanner();
+        state.user = null;
+        document.getElementById('logoutBtn').style.display = 'none';
+        navigate('auth');
+    }
+
+    // --- NAVIGATION & UI ---
+    function navigate(page) {
+        stopScanner();
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(`${page}Section`).classList.add('active');
+
+        const titles = {
+            auth: "Tabungan Warga", home: "Beranda", transfer: "Transfer Dana",
+            setorAdmin: "Setor Tunai", tarikAdmin: "Tarik Tunai", scanner: "Pindai QR",
+            myqr: "QR Rekening", mutasi: "Mutasi Rekening", rekapAdmin: "Laporan Saldo", kelolaAdmin: "Data Nasabah"
+        };
+        document.getElementById('pageTitle').textContent = titles[page] || "Tabungan Warga";
+        document.getElementById('backBtn').style.display = (page === 'home' || page === 'auth') ? 'none' : 'block';
+
+        if (page === 'myqr') renderMyQR();
+        if (page === 'mutasi') renderMutations();
+        if (page === 'rekapAdmin') renderRekap();
+        if (page === 'kelolaAdmin') renderNasabah();
+    }
+
+    function toggleBalance() {
+        state.hideBalance = !state.hideBalance;
+        renderBalance();
+    }
+
+    function renderBalance() {
+        document.getElementById('balanceText').textContent = state.hideBalance
+            ? "Rp ••••••••"
+            : `Rp ${state.user.saldo.toLocaleString('id-ID')}`;
+        document.getElementById('balanceHint').textContent = state.hideBalance
+            ? "Ketuk untuk menampilkan saldo"
+            : "Ketuk untuk menyembunyikan saldo";
+    }
+
+    function addNominal(inputId, val) {
+        const el = document.getElementById(inputId);
+        el.value = (parseInt(el.value) || 0) + val;
+    }
+
+    // --- SEARCH AUTOCOMPLETE ---
+    function searchMember(query, boxId, inputId, onSelect) {
+        const box = document.getElementById(boxId);
+        const q = query.trim().toLowerCase();
+        if (!q) { box.style.display = 'none'; return; }
+
+        const matches = state.members.filter(m => m.name.toLowerCase().includes(q) || String(m.hp).includes(q));
+        box.innerHTML = matches.map(m => `
+            <div class="suggestion-item" onclick="selectSuggestion('${boxId}', '${inputId}', '${m.name}', '${m.hp}', ${onSelect})">
+                <strong>${m.name}</strong><span>${m.hp}</span>
+            </div>
+        `).join('');
+        box.style.display = matches.length ? 'block' : 'none';
+    }
+
+    function selectSuggestion(boxId, inputId, name, hp, callback) {
+        document.getElementById(inputId).value = `${name} (${hp})`;
+        document.getElementById(boxId).style.display = 'none';
+        callback(hp);
+    }
+
+    // --- TRANSACTIONS (STANDAR OTORISASI PIN) ---
+    function promptTransferPin() {
+        const targetHp = selectedTfHp || document.getElementById('tfTarget').value.trim();
+        const amount = parseInt(document.getElementById('tfAmount').value);
+
+        if (!targetHp || isNaN(amount) || amount < 1000) return showModal("Validasi", "Pilih rekening tujuan dan masukkan nominal minimal Rp 1.000.");
+        if (normalizeHp(targetHp) === normalizeHp(state.user.hp)) return showModal("Validasi", "Tidak dapat mentransfer ke rekening sendiri.");
+        if (amount > state.user.saldo && !state.user.isAdmin) return showModal("Saldo Tidak Cukup", "Saldo Anda tidak mencukupi untuk transaksi ini.");
+
+        const receiver = state.members.find(m => normalizeHp(m.hp) === normalizeHp(targetHp));
+        if (!receiver) return showModal("Rekening Tidak Ditemukan", "Pastikan nomor rekening tujuan sudah benar.");
+
+        showModal(
+            "Konfirmasi Transfer",
+            `Transfer sebesar <strong>Rp ${amount.toLocaleString('id-ID')}</strong> ke <strong>${receiver.name}</strong> (${receiver.hp}). Masukkan PIN Anda:`,
+            `<input type="password" inputmode="numeric" maxlength="6" id="confirmTfPin" placeholder="••••••" style="width:100%; padding:12px; background:var(--bg); border:1px solid var(--border); color:#fff; border-radius:8px; text-align:center; font-size:1.2rem;">`,
+            `<button class="btn-sm" style="flex:1; padding:12px;" onclick="closeModal()">Batal</button>
+             <button class="btn-primary btn-success" style="flex:1; margin:0;" onclick="executeTransfer('${receiver.hp}', ${amount})">Kirim</button>`
+        );
+    }
+
+    async function executeTransfer(receiverHp, amount) {
+        const pin = document.getElementById('confirmTfPin').value.trim();
+        const userPin = String(state.user.pass || "").trim();
+        if (pin !== userPin && normalizePin(pin) !== normalizePin(userPin)) return alert("PIN Keamanan Salah!");
+
+        closeModal();
+        const receiver = state.members.find(m => normalizeHp(m.hp) === normalizeHp(receiverHp));
+        const time = new Date().toLocaleString('id-ID');
+
+        state.user.saldo -= amount;
+        renderBalance();
+
+        await sendPost({
+            type: "transfer",
+            senderHp: state.user.hp,
+            senderSaldo: state.user.saldo,
+            receiverHp: receiver.hp,
+            receiverSaldo: (Number(receiver.saldo) || 0) + amount,
+            user: state.user.name,
+            title: `Transfer ke ${receiver.name}`,
+            time,
+            amount: `-Rp ${amount.toLocaleString('id-ID')}`,
+            color: "var(--danger)"
         });
 
-        async function loadNasabahDashboardData(showLoading = false) {
-            if (!sessionUser) return;
-            if (showLoading) showLoader("Memuat...");
-            try {
-                let res = await fetch(`${URL_GAS}?action=getNasabahData&id=${sessionUser.id}`);
-                let data = await res.json();
-                if (showLoading) hideLoader();
-                if (data.success) {
-                    sessionUser = data.user;
-                    sessionStorage.setItem('session_nasabah', JSON.stringify(sessionUser));
-                    cacheMutasi = data.mutasi || [];
-                    rawBalanceValue = Number(sessionUser.saldo || 0);
+        await syncData();
+        document.getElementById('tfTarget').value = "";
+        document.getElementById('tfAmount').value = "";
+        selectedTfHp = "";
 
-                    document.getElementById('nasabah-name-display').innerText = sessionUser.nama;
-                    document.getElementById('nasabah-id-display').innerText = sessionUser.id;
-                    document.getElementById('nasabah-saldo-display').innerText = formatRupiah(rawBalanceValue);
+        showReceipt({
+            jenis: "TRANSFER ANTAR REKENING",
+            nama: receiver.name,
+            hp: receiver.hp,
+            nominal: amount,
+            saldo: state.user.saldo,
+            waktu: time,
+            petugas: state.user.name
+        });
+        navigate('home');
+    }
 
-                    let badge = document.getElementById('nasabah-status-badge');
-                    let desc = document.getElementById('nasabah-status-desc');
-                    if (rawBalanceValue > 0) {
-                        badge.className = "text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-md font-semibold";
-                        badge.innerText = "Aktif";
-                        desc.classList.add('hidden');
-                    } else {
-                        badge.className = "text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-md font-semibold";
-                        badge.innerText = "Belum Aktif";
-                        desc.classList.remove('hidden');
-                    }
+    async function executeSetor() {
+        const targetHp = selectedSetorHp || document.getElementById('setorTarget').value.trim();
+        const amount = parseInt(document.getElementById('setorAmount').value);
 
-                    if (cacheMutasi.length > 0) {
-                        let latest = cacheMutasi[0];
-                        let key = (latest.waktu || "") + "_" + (latest.amount || "") + "_" + (latest.type || "");
-                        if (key !== lastSpokenMutasiId) {
-                            lastSpokenMutasiId = key;
-                            localStorage.setItem('last_spoken_mutasi_id', key);
-                            playSpeechNotification(Number(latest.amount), latest.type);
-                        }
-                    }
+        if (!targetHp || isNaN(amount) || amount < 1000) return showModal("Validasi", "Lengkapi data nasabah dan nominal setoran.");
+        const target = state.members.find(m => normalizeHp(m.hp) === normalizeHp(targetHp));
+        if (!target) return showModal("Gagal", "Rekening nasabah tidak ditemukan.");
 
-                    let mHtml = '';
-                    cacheMutasi.forEach(t => {
-                        let isSetor = t.type === 'SETOR' || t.type === 'TRANSFER MASUK';
-                        mHtml += `<div class="bg-white p-3 rounded-xl border flex justify-between items-center text-xs"><div><b>${t.type}</b><br><span class="text-[10px] text-slate-400">${t.waktu}</span></div><span class="font-bold ${isSetor ? 'text-emerald-600' : 'text-rose-600'}">${isSetor ? '+' : '-'}${formatRupiah(t.amount)}</span></div>`;
-                    });
-                    document.getElementById('nasabah-mutasi-list').innerHTML = mHtml || '<p class="text-xs text-slate-400">Belum ada mutasi.</p>';
-                }
-            } catch (err) { if (showLoading) hideLoader(); }
-        }
+        const newSaldo = (Number(target.saldo) || 0) + amount;
+        const time = new Date().toLocaleString('id-ID');
 
-        setInterval(() => { if (sessionUser) loadNasabahDashboardData(false); }, 5000);
+        await sendPost({
+            type: "setorTunai",
+            receiverHp: target.hp,
+            receiverSaldo: newSaldo,
+            user: target.name,
+            title: "Setor Tunai Teller",
+            time,
+            amount: `+Rp ${amount.toLocaleString('id-ID')}`,
+            color: "var(--success)"
+        });
 
-        function openModalMyQR() {
-            Swal.fire({ title: 'QR Saya', html: `<div id="qrcode-box" class="p-3 bg-white inline-block border rounded-xl"></div><p class="text-xs font-bold mt-2">${sessionUser.id}</p>`, didOpen: () => { new QRCode(document.getElementById('qrcode-box'), { text: sessionUser.id, width: 150, height: 150 }); } });
-        }
+        await syncData();
+        document.getElementById('setorTarget').value = "";
+        document.getElementById('setorAmount').value = "";
+        selectedSetorHp = "";
 
-        function openModalScanQR() {
-            if (rawBalanceValue <= 0) {
-                Swal.fire('Belum Aktif', 'Saldo Rp 0. Lakukan setoran awal terlebih dahulu.', 'warning');
-                return;
-            }
-            document.getElementById('modal-scanner').classList.remove('hidden');
-            html5QrScanner = new Html5Qrcode("qr-reader");
-            html5QrScanner.start(
+        showReceipt({
+            jenis: "SETOR TUNAI",
+            nama: target.name,
+            hp: target.hp,
+            nominal: amount,
+            saldo: newSaldo,
+            waktu: time,
+            petugas: state.user.name
+        });
+    }
+
+    async function requestTarik() {
+        const targetHp = selectedTarikHp || document.getElementById('tarikTarget').value.trim();
+        const amount = parseInt(document.getElementById('tarikAmount').value);
+
+        if (!targetHp || isNaN(amount) || amount < 1000) return showModal("Validasi", "Lengkapi data nasabah dan nominal penarikan.");
+        const target = state.members.find(m => normalizeHp(m.hp) === normalizeHp(targetHp));
+        if (!target) return showModal("Gagal", "Nasabah tidak ditemukan.");
+        if (amount > (Number(target.saldo) || 0)) return showModal("Saldo Kurang", "Saldo nasabah tidak mencukupi.");
+
+        const token = Math.floor(100000 + Math.random() * 900000);
+        await sendPost({ type: "requestTarik", hp: target.hp, pin: `${amount}|${token}` });
+
+        document.getElementById('tarikTarget').value = "";
+        document.getElementById('tarikAmount').value = "";
+        selectedTarikHp = "";
+        showModal("Menunggu Otorisasi", `Permintaan penarikan Rp ${amount.toLocaleString('id-ID')} telah dikirim ke aplikasi <strong>${target.name}</strong> untuk dikonfirmasi dengan PIN.`);
+        navigate('home');
+    }
+
+    function openTarikApprovalModal(pinData) {
+        if (document.getElementById('modalOverlay').style.display === 'flex') return;
+        const amount = Number(pinData.split('|')[0]);
+
+        showModal(
+            "Otorisasi Tarik Tunai",
+            `Teller mengajukan penarikan tunai sebesar <strong>Rp ${amount.toLocaleString('id-ID')}</strong> dari rekening Anda. Masukkan PIN untuk menyetujui:`,
+            `<input type="password" inputmode="numeric" maxlength="6" id="approveTarikPin" placeholder="••••••" style="width:100%; padding:12px; background:var(--bg); border:1px solid var(--border); color:#fff; border-radius:8px; text-align:center; font-size:1.2rem;">`,
+            `<button class="btn-sm" style="flex:1; padding:12px;" onclick="rejectTarik()">Tolak</button>
+             <button class="btn-primary btn-success" style="flex:1; margin:0;" onclick="confirmTarik(${amount})">Setujui</button>`
+        );
+    }
+
+    async function confirmTarik(amount) {
+        const pin = document.getElementById('approveTarikPin').value.trim();
+        const userPin = String(state.user.pass || "").trim();
+        if (pin !== userPin && normalizePin(pin) !== normalizePin(userPin)) return alert("PIN salah!");
+        if (state.user.saldo < amount) { closeModal(); return showModal("Gagal", "Saldo tidak mencukupi."); }
+
+        state.user.saldo -= amount;
+        renderBalance();
+        closeModal();
+
+        await sendPost({
+            type: "tarikTunai",
+            senderHp: state.user.hp,
+            senderSaldo: state.user.saldo,
+            user: state.user.name,
+            title: "Tarik Tunai Teller",
+            time: new Date().toLocaleString('id-ID'),
+            amount: `-Rp ${amount.toLocaleString('id-ID')}`,
+            color: "var(--danger)"
+        });
+        await sendPost({ type: "requestTarik", hp: state.user.hp, pin: "" });
+        await syncData();
+        showModal("Berhasil", "Penarikan tunai telah disetujui dan saldo Anda telah disesuaikan.");
+    }
+
+    async function rejectTarik() {
+        await sendPost({ type: "requestTarik", hp: state.user.hp, pin: "" });
+        closeModal();
+        showModal("Dibatalkan", "Permintaan penarikan tunai ditolak.");
+    }
+
+    function infoTarikTunai() {
+        showModal("Penarikan Tunai", "Silakan kunjungi Teller / Admin RT dengan membawa perangkat Anda. Setelah Teller menginput nominal, layar aplikasi Anda akan meminta PIN konfirmasi.");
+    }
+
+    // --- QR CODE & SCANNER ---
+    function renderMyQR() {
+        document.getElementById('qrOwnerName').textContent = state.user.name;
+        document.getElementById('qrOwnerHp').textContent = `No. Rekening: ${state.user.hp}`;
+        const box = document.getElementById('qrcode');
+        box.innerHTML = "";
+        QRCode.toCanvas(document.createElement('canvas'), `REK:${state.user.hp}`, { width: 180, margin: 1 }, (err, canvas) => {
+            if (!err) box.appendChild(canvas);
+        });
+    }
+
+    function openScanner(context) {
+        state.scanContext = context;
+        navigate('scanner');
+        setTimeout(() => {
+            state.scannerInstance = new Html5Qrcode("qr-reader");
+            state.scannerInstance.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 220, height: 220 } },
-                (decodedText) => {
-                    closeNasabahScanner();
-                    let match = decodedText.trim().match(/NSB-\d+/i);
-                    let targetId = match ? match[0].toUpperCase() : decodedText.trim().toUpperCase();
-                    openModalTransfer(targetId);
+                { fps: 15, qrbox: { width: 180, height: 180 } },
+                (decoded) => {
+                    const hp = decoded.replace(/^REK:/i, '').trim();
+                    stopScanner();
+                    if (state.scanContext === 'setor') {
+                        selectedSetorHp = hp;
+                        document.getElementById('setorTarget').value = hp;
+                        navigate('setorAdmin');
+                    } else {
+                        selectedTfHp = hp;
+                        document.getElementById('tfTarget').value = hp;
+                        navigate('transfer');
+                    }
                 },
-                (errorMessage) => {}
-            ).catch((err) => {
-                closeNasabahScanner();
-                Swal.fire('Kamera Gagal', 'Pastikan izin kamera diaktifkan di browser Anda.', 'error');
-            });
-        }
+                () => {}
+            ).catch(() => showModal("Kamera Gagal", "Pastikan izin kamera diaktifkan pada browser."));
+        }, 200);
+    }
 
-        function closeNasabahScanner() {
-            document.getElementById('modal-scanner').classList.add('hidden');
-            if (html5QrScanner) {
-                html5QrScanner.stop().then(() => { html5QrScanner.clear(); html5QrScanner = null; }).catch(() => { html5QrScanner = null; });
-            }
+    function stopScanner() {
+        if (state.scannerInstance) {
+            const ref = state.scannerInstance;
+            state.scannerInstance = null;
+            ref.stop().then(() => ref.clear()).catch(() => {});
         }
+    }
 
-        async function openModalTransfer(presetTarget = '') {
-            if (rawBalanceValue <= 0) { Swal.fire('Belum Aktif', 'Saldo Rp 0.', 'warning'); return; }
-            const { value: formValues } = await Swal.fire({
-                title: 'Transfer Saldo',
-                html: `
-                    <div class="space-y-3 text-left">
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">ID Nasabah Tujuan</label>
-                            <input id="swal-target" class="swal2-input !mx-0 !w-full text-xs uppercase" value="${presetTarget || 'NSB-'}" placeholder="NSB-xxxx">
-                        </div>
-                        <div id="swal-target-info" class="bg-indigo-50 p-2.5 rounded-xl border border-indigo-200 text-xs text-indigo-900 hidden">
-                            <p><strong>Penerima:</strong> <span id="swal-info-nama" class="font-bold">-</span></p>
-                            <p><strong>No. HP/WA:</strong> <span id="swal-info-phone" class="font-bold">-</span></p>
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nominal (Rp)</label>
-                            <input id="swal-amount" type="number" class="swal2-input !mx-0 !w-full text-xs" placeholder="0">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Catatan</label>
-                            <input id="swal-desc" class="swal2-input !mx-0 !w-full text-xs" placeholder="Catatan transaksi...">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">PIN 6 Digit Anda</label>
-                            <input id="swal-pin" type="password" maxlength="6" inputmode="numeric" class="swal2-input !mx-0 !w-full text-xs" placeholder="••••••">
-                        </div>
+    // --- MUTATIONS, REPORTS & ADMIN ---
+    function renderMutations() {
+        const list = document.getElementById('mutasiList');
+        const filtered = state.user.isAdmin
+            ? state.mutations
+            : state.mutations.filter(m => m.user === state.user.name || (m.title && m.title.includes(state.user.name)));
+
+        list.innerHTML = filtered.length
+            ? filtered.map(m => `
+                <div class="list-item">
+                    <div>
+                        <div style="font-weight:600;">${m.title}</div>
+                        <small style="color:var(--muted);">${m.time} ${state.user.isAdmin ? `• ${m.user}` : ''}</small>
                     </div>
-                `,
-                focusConfirm: false, showCancelButton: true, confirmButtonText: 'Kirim Sekarang', cancelButtonText: 'Batal',
-                didOpen: () => {
-                    const targetInput = document.getElementById('swal-target');
-                    const checkTargetAccount = async (id) => {
-                        const infoBox = document.getElementById('swal-target-info');
-                        const nameEl = document.getElementById('swal-info-nama');
-                        const phoneEl = document.getElementById('swal-info-phone');
-                        if (id.length < 5 || id === sessionUser.id) { infoBox.classList.add('hidden'); return; }
-                        try {
-                            let res = await fetch(`${URL_GAS}?action=getNasabahData&id=${id}`);
-                            let data = await res.json();
-                            if (data.success && data.user) {
-                                nameEl.innerText = data.user.nama;
-                                phoneEl.innerText = data.user.phone || '-';
-                                infoBox.classList.remove('hidden');
-                            } else { infoBox.classList.add('hidden'); }
-                        } catch (err) { infoBox.classList.add('hidden'); }
-                    };
-                    if (presetTarget) checkTargetAccount(presetTarget);
-                    targetInput.addEventListener('input', (e) => { checkTargetAccount(e.target.value.trim().toUpperCase()); });
-                },
-                preConfirm: () => ({
-                    target: document.getElementById('swal-target').value.trim().toUpperCase(),
-                    amount: Number(document.getElementById('swal-amount').value),
-                    desc: document.getElementById('swal-desc').value.trim(),
-                    pin: document.getElementById('swal-pin').value
-                })
-            });
+                    <strong style="color:${m.color || '#fff'}">${m.amount}</strong>
+                </div>`).join('')
+            : `<div class="list-item" style="justify-content:center; color:var(--muted);">Belum ada transaksi</div>`;
+    }
 
-            if (formValues) {
-                if (!formValues.target || formValues.amount <= 0 || !formValues.pin) {
-                    Swal.fire('Perhatian', 'Mohon lengkapi ID tujuan, nominal, dan PIN.', 'warning');
-                    return;
-                }
+    function renderRekap() {
+        document.getElementById('rekapList').innerHTML = state.members.map(m => `
+            <div class="list-item">
+                <div><strong>${m.name}</strong><br><small style="color:var(--muted);">${m.hp}</small></div>
+                <strong style="color:var(--success);">Rp ${(Number(m.saldo) || 0).toLocaleString('id-ID')}</strong>
+            </div>`).join('');
+    }
 
-                showLoader("Mengirim...");
-                let res = await fetch(URL_GAS, { method: 'POST', body: JSON.stringify({ action: "transferSaldo", senderId: sessionUser.id, ...formValues }) });
-                let data = await res.json();
-                hideLoader();
-                if (data.success) {
-                    loadNasabahDashboardData(true);
-                    generateAndDownloadPDF({
-                        title: "STRUK TRANSFER BERHASIL",
-                        ref: "TRX-" + Math.floor(100000 + Math.random() * 900000),
-                        waktu: new Date().toLocaleString('id-ID'),
-                        pengirim: sessionUser.nama + " (" + sessionUser.id + ")",
-                        penerima: formValues.target,
-                        nominal: formatRupiah(formValues.amount),
-                        catatan: formValues.desc || "-",
-                        phoneTarget: data.phone || ""
-                    });
-                } else Swal.fire('Gagal', data.message, 'error');
-            }
+    function exportPDF() {
+        html2pdf().from(document.getElementById('pdfArea')).set({
+            margin: 10, filename: `Laporan_Tabungan_${new Date().toISOString().slice(0,10)}.pdf`,
+            html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4' }
+        }).save();
+    }
+
+    function renderNasabah() {
+        document.getElementById('nasabahList').innerHTML = state.members.map((m, idx) => {
+            const isProtectedAdmin = idx === 0 || String(m.role || "").toLowerCase() === "admin";
+            const actionControl = isProtectedAdmin
+                ? `<span style="font-size:0.75rem; color:var(--muted); font-weight:600;">Admin Utama</span>`
+                : `<button class="btn-sm btn-logout" onclick="deleteNasabah('${m.hp}')">Hapus</button>`;
+
+            return `
+                <div class="list-item">
+                    <div><strong>${m.name}</strong><br><small style="color:var(--muted);">${m.hp} • Rp ${(Number(m.saldo)||0).toLocaleString('id-ID')}</small></div>
+                    ${actionControl}
+                </div>`;
+        }).join('');
+    }
+
+    function showAddMemberModal() {
+        showModal(
+            "Registrasi Nasabah Baru",
+            "Nasabah akan diminta membuat PIN pribadi saat login pertama kali.",
+            `<input type="text" id="newMemName" placeholder="Nama Lengkap" style="width:100%; padding:10px; margin-bottom:8px; background:var(--bg); border:1px solid var(--border); color:#fff; border-radius:8px;">
+             <input type="tel" id="newMemHp" placeholder="Nomor HP (Rekening)" style="width:100%; padding:10px; background:var(--bg); border:1px solid var(--border); color:#fff; border-radius:8px;">`,
+            `<button class="btn-sm" style="flex:1; padding:12px;" onclick="closeModal()">Batal</button>
+             <button class="btn-primary" style="flex:1; margin:0;" onclick="saveNewMember()">Simpan</button>`
+        );
+    }
+
+    async function saveNewMember() {
+        const name = document.getElementById('newMemName').value.trim();
+        const hp = document.getElementById('newMemHp').value.trim();
+        if (!name || !hp) return alert("Nama dan Nomor HP wajib diisi.");
+
+        closeModal();
+        await sendPost({ type: "addMember", name, hp, saldo: 0, pass: "", pattern: "" });
+        await syncData();
+        renderNasabah();
+    }
+
+    async function deleteNasabah(hp) {
+        const idx = state.members.findIndex(m => normalizeHp(m.hp) === normalizeHp(hp));
+        if (idx === 0 || String(state.members[idx]?.role || "").toLowerCase() === "admin") {
+            return showModal("Akses Dibatasi", "Akun Admin utama (pendaftar pertama) tidak dapat dihapus dari aplikasi.");
         }
+        if (!confirm("Hapus rekening nasabah ini?")) return;
+        await sendPost({ type: "deleteMember", hp });
+        await syncData();
+        renderNasabah();
+    }
 
-        function generateAndDownloadPDF(data) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ unit: 'mm', format: [80, 120] });
+    // --- RECEIPT & MODAL HELPERS ---
+    function showReceipt(data) {
+        const waText = encodeURIComponent(
+            `*BUKTI TRANSAKSI TABUNGAN WARGA*\n` +
+            `Jenis: ${data.jenis}\nNama: ${data.nama}\nRekening: ${data.hp}\n` +
+            `Nominal: Rp ${data.nominal.toLocaleString('id-ID')}\n` +
+            `Saldo Akhir: Rp ${data.saldo.toLocaleString('id-ID')}\nWaktu: ${data.waktu}`
+        );
 
-            doc.setFillColor(49, 46, 129);
-            doc.rect(0, 0, 80, 25, 'F');
-            doc.setTextColor(165, 180, 252);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("TABUNGKU", 40, 12, { align: "center" });
+        showModal(
+            "Transaksi Berhasil",
+            "Bukti transaksi digital telah diterbitkan:",
+            `<div class="receipt">
+                <div style="text-align:center; border-bottom:1px dashed #94a3b8; padding-bottom:6px; margin-bottom:8px;"><strong>BUKTI TRANSAKSI DIGITAL</strong></div>
+                <div class="receipt-row"><span>Jenis:</span><strong>${data.jenis}</strong></div>
+                <div class="receipt-row"><span>Nama:</span><strong>${data.nama}</strong></div>
+                <div class="receipt-row"><span>Rekening:</span><span>${data.hp}</span></div>
+                <div class="receipt-row"><span>Nominal:</span><strong>Rp ${data.nominal.toLocaleString('id-ID')}</strong></div>
+                <div class="receipt-row"><span>Saldo Akhir:</span><strong>Rp ${data.saldo.toLocaleString('id-ID')}</strong></div>
+                <div class="receipt-row"><span>Waktu:</span><span>${data.waktu}</span></div>
+            </div>`,
+            `<a href="https://wa.me/${data.hp}?text=${waText}" target="_blank" class="btn-primary btn-success" style="text-decoration:none; margin:0; flex:1;">Kirim WA</a>
+             <button class="btn-sm" style="flex:1;" onclick="closeModal()">Tutup</button>`
+        );
+    }
 
-            doc.setTextColor(148, 163, 184);
-            doc.setFontSize(8);
-            doc.text("Bukti Transfer Resmi Komunitas", 40, 18, { align: "center" });
+    function showModal(title, desc, customHtml = "", actionsHtml = "") {
+        document.getElementById('modalTitle').textContent = title;
+        document.getElementById('modalDesc').innerHTML = desc;
+        document.getElementById('modalCustom').innerHTML = customHtml;
+        document.getElementById('modalActions').innerHTML = actionsHtml || `<button class="btn-primary" style="margin:0;" onclick="closeModal()">Tutup</button>`;
+        document.getElementById('modalOverlay').style.display = 'flex';
+    }
 
-            doc.setTextColor(30, 41, 59);
-            doc.setFontSize(9);
-            let y = 35;
+    function closeModal() {
+        document.getElementById('modalOverlay').style.display = 'none';
+    }
 
-            const printRow = (label, val, isGreen = false) => {
-                doc.setFont("helvetica", "normal");
-                doc.setTextColor(100, 116, 139);
-                doc.text(label, 10, y);
-                doc.setFont("helvetica", "bold");
-                if(isGreen) doc.setTextColor(16, 185, 129);
-                else doc.setTextColor(30, 41, 59);
-                doc.text(String(val || "-"), 70, y, { align: "right" });
-                y += 8;
-            };
+    function setStatus(msg) {
+        document.getElementById('statusBar').textContent = msg;
+    }
 
-            printRow("No. Referensi", data.ref);
-            printRow("Waktu", data.waktu);
-            if(data.pengirim) printRow("Pengirim", data.pengirim);
-            if(data.penerima) printRow("Penerima", data.penerima);
-            printRow("Nominal", data.nominal, true);
-            printRow("Catatan", data.catatan);
-
-            y += 2;
-            doc.setDrawColor(203, 213, 225);
-            doc.setLineDash([2, 2], 0);
-            doc.line(10, y, 70, y);
-
-            y += 10;
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(16, 185, 129);
-            doc.setFontSize(9);
-            doc.text("STATUS: BERHASIL & VALID", 40, y, { align: "center" });
-
-            y += 6;
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(148, 163, 184);
-            doc.setFontSize(7);
-            doc.text("Dokumen digital ini sah diterbitkan oleh Sistem TabungKu", 40, y, { align: "center" });
-
-            doc.save(`Struk-TabungKu-${data.ref}.pdf`);
-
-            let cleanPhone = String(data.phoneTarget || "").replace(/\D/g, '');
-            let waText = encodeURIComponent(`Halo, berikut dokumen PDF bukti transfer resmi TabungKu:\n\nNo Ref: ${data.ref}\nNominal: ${data.nominal}\nStatus: BERHASIL`);
-            let waUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${waText}` : `https://wa.me/?text=${waText}`;
-
-            Swal.fire({
-                title: 'Transfer Sukses & PDF Tersimpan!',
-                html: `
-                    <div class="bg-slate-100 p-3 rounded-xl border text-left text-xs space-y-1 mb-3">
-                        <p><strong>Ref:</strong> ${data.ref}</p>
-                        <p><strong>Nominal:</strong> <span class="text-emerald-600 font-bold">${data.nominal}</span></p>
-                    </div>
-                    <p class="text-xs text-slate-600 mb-3">File PDF telah diunduh ke perangkat. Apakah Anda ingin mengirimkannya ke WhatsApp penerima?</p>
-                `,
-                showCancelButton: true,
-                confirmButtonText: '<i class="fa-brands fa-whatsapp mr-1"></i> Ya, Kirim ke WA',
-                cancelButtonText: 'Tidak, Selesai Saja',
-                confirmButtonColor: '#16a34a',
-                cancelButtonColor: '#64748b'
-            }).then((result) => {
-                if (result.isConfirmed) { window.open(waUrl, '_blank'); }
-            });
-        }
-
-        function logout() { sessionUser = null; sessionStorage.removeItem('session_nasabah'); switchView('view-login'); }
-        function formatRupiah(n) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0); }
-    </script>
+    // Init
+    syncData();
+    setInterval(syncData, 6000);
+</script>
 </body>
 </html>
